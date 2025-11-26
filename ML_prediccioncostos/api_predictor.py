@@ -251,10 +251,39 @@ class PredictorPreciosAPI:
         
         productos_procesados = []
         errores = []
+        correcciones = []
         
         for producto in productos:
             try:
-                datos = self._obtener_prediccion_producto(producto, fecha_inicio, fecha_fin)
+                # Intentar buscar el producto si no existe exactamente
+                producto_a_usar = producto
+                fue_corregido = False
+                
+                # Verificar si el producto existe
+                resultado_busqueda = self.buscar_producto(producto)
+                
+                if not resultado_busqueda['encontrado']:
+                    # Si no se encuentra exacto, usar la primera sugerencia
+                    if resultado_busqueda['sugerencias']:
+                        producto_original = producto
+                        producto_a_usar = resultado_busqueda['sugerencias'][0]
+                        fue_corregido = True
+                        correcciones.append({
+                            "producto_solicitado": producto_original,
+                            "producto_usado": producto_a_usar
+                        })
+                    else:
+                        # No hay sugerencias, agregar error
+                        errores.append({
+                            "producto": producto,
+                            "error": f"No se encontró modelo para '{producto}' ni sugerencias disponibles"
+                        })
+                        continue
+                else:
+                    producto_a_usar = resultado_busqueda['producto_exacto']
+                
+                # Obtener predicciones con el producto correcto
+                datos = self._obtener_prediccion_producto(producto_a_usar, fecha_inicio, fecha_fin)
                 
                 if "error" in datos:
                     errores.append({
@@ -266,7 +295,7 @@ class PredictorPreciosAPI:
                 ruta_grafica = None
                 if generar_graficas:
                     ruta_grafica = self._generar_grafica(
-                        producto,
+                        producto_a_usar,
                         datos['predicciones'],
                         fecha_inicio,
                         fecha_fin,
@@ -275,7 +304,7 @@ class PredictorPreciosAPI:
                 mejor_dia_info = self._calcular_mejor_dia(datos['predicciones'])
                 
                 producto_data = {
-                    "alimento": producto,
+                    "alimento": producto_a_usar,
                     "fecha_inicio": fecha_inicio,
                     "fecha_fin": fecha_fin,
                     "unidad": "kg/litro",
@@ -283,6 +312,11 @@ class PredictorPreciosAPI:
                     "mejor_dia_compra": mejor_dia_info,
                     "predicciones": datos['predicciones']
                 }
+                
+                # Si fue corregido, agregar información
+                if fue_corregido:
+                    producto_data["producto_solicitado"] = producto
+                    producto_data["nota"] = f"Se usó '{producto_a_usar}' (mejor coincidencia para '{producto}')"
                 
                 if ruta_grafica:
                     producto_data["grafica"] = ruta_grafica
@@ -306,6 +340,11 @@ class PredictorPreciosAPI:
             "productos_con_error": len(errores),
             "productos": productos_procesados
         }
+        
+        # Agregar correcciones si las hubo
+        if correcciones:
+            resultado["correcciones"] = correcciones
+            resultado["nota"] = f"Se realizaron {len(correcciones)} corrección(es) automática(s)"
         
         if errores:
             resultado["errores"] = errores
