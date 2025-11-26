@@ -1,54 +1,84 @@
-# Sistema de Predicción de Precios de Alimentos
+# API de predicción de precios de alimentos
 
-Sistema interactivo para predecir precios de productos alimenticios en México.
+API para predecir precios de alimentos usando modelos Prophet. 
 
-## 📋 Requisitos
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
+[![Flask](https://img.shields.io/badge/Flask-2.3+-green.svg)](https://flask.palletsprojects.com/)
+[![Prophet](https://img.shields.io/badge/Prophet-1.1+-orange.svg)](https://facebook.github.io/prophet/)
+
+## Características
+
+-  **87 productos** con modelos de predicción entrenados
+-  **Predicciones diarias** con intervalos de confianza
+-  **Búsqueda inteligente** con sugerencias de productos similares
+-  **Detección automática** del mejor día/período para comprar
+-  **Gráficas PNG** 
+-  **API RESTful** lista para integrar
+-  **CORS habilitado** para desarrollo frontend
+
+##  Inicio Rápido
+
+### Instalación Local
 
 ```bash
+# Instalar dependencias
 pip install -r requirements.txt
+
+# Iniciar servidor
+python app_flask.py
+
+# API disponible en:
+# http://localhost:5000/api
 ```
 
-## 🚀 Uso
+## Endpoints de la API
 
-### Opción 1: Script Interactivo (Recomendado)
-
+### Health Check
 ```bash
-python predictor_precios.py
+GET /api/health
 ```
 
-El script te guiará paso a paso:
-
-1. **Ver productos disponibles**: Lista todos los productos con modelos entrenados
-2. **Generar predicciones**: 
-   - Ingresa el período de fechas (formato: YYYY-MM-DD)
-   - Agrega productos uno por uno (escribe 'ver' para ver disponibles)
-   - Escribe 'fin' cuando termines
-   - Confirma y procesa
-
-### Opción 2: Notebook Jupyter
-
+### Obtener Productos
 ```bash
-jupyter notebook prueba_de_modelos.ipynb
+GET /api/productos
+# Retorna: Lista de 87 productos disponibles
 ```
 
-## 📊 Salidas Generadas
+### Buscar Producto
+```bash
+GET /api/productos/buscar?q=leche
+# Retorna: Producto exacto o sugerencias similares
+```
 
-### 1. JSON Consolidado
-**Ubicación**: `./predicciones/predicciones_FECHA-INICIO_a_FECHA-FIN.json`
+### Generar Predicciones
+```bash
+POST /api/predicciones
+Content-Type: application/json
 
-**Estructura**:
+{
+  "productos": ["Tortilla de maíz", "Arroz", "Huevo"],
+  "fecha_inicio": "2026-01-01",
+  "fecha_fin": "2026-01-31",
+  "generar_graficas": true
+}
+```
+
+## Formato de Respuestas
+
 ```json
 {
+  "success": true,
   "fecha_consulta": "2025-11-25 19:20:54",
   "periodo": {
     "inicio": "2026-01-01",
     "fin": "2026-01-31"
   },
-  "total_productos": 5,
+  "total_productos": 3,
   "productos": [
     {
       "alimento": "Tortilla de maíz",
       "mejor_dia_compra": {
+        "tipo": "rango",
         "fecha_inicio": "2026-01-12",
         "fecha_fin": "2026-01-16",
         "precio_esperado": 17.43,
@@ -68,82 +98,63 @@ jupyter notebook prueba_de_modelos.ipynb
 }
 ```
 
-### 2. Gráficas
-**Ubicación**: `./graficas/`
+### Mejor Día de Compra
 
-- Una gráfica por producto en formato PNG
-- Resolución: 300 DPI
-- Incluye precio esperado e intervalo de confianza
+**Día único:**
+```json
+{
+  "tipo": "dia_unico",
+  "fecha": "2026-01-15",
+  "precio_esperado": 17.43
+}
+```
 
-## 🎯 Características
+**Rango de días:** 
+```json
+{
+  "tipo": "rango",
+  "fecha_inicio": "2026-01-12",
+  "fecha_fin": "2026-01-16",
+  "precio_esperado": 17.43,
+  "dias_disponibles": 5
+}
+```
 
-✅ **Predicciones diarias** para cualquier rango de fechas  
-✅ **Mejor día/período de compra** detectado automáticamente  
-✅ **Rangos de fechas** cuando el precio mínimo se mantiene varios días  
-✅ **Gráficas automáticas** con intervalos de confianza  
-✅ **JSON listo para frontend** con rutas relativas  
-✅ **Interfaz interactiva** con validación de datos  
+## Productos Disponibles
 
-## 📦 Productos Disponibles
-
-El sistema incluye modelos para:
-- Tortilla de maíz
-- Arroz
-- Frijol
-- Huevo
-- Leche pasteurizada y fresca
+**87 productos** con modelos entrenados:
+- Tortilla de maíz, Arroz, Frijol, Huevo, Leche
+- Carnes: Pollo, Res, Cerdo, Pescado
+- Frutas: Manzana, Plátano, Naranja, Aguacate
+- Verduras: Jitomate, Cebolla, Papa, Lechuga
 - Y muchos más...
 
-Usa la opción 1 del menú para ver la lista completa.
+Endpoint: `GET /api/productos` para lista completa.
 
-## 🔧 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 ML_prediccioncostos/
-├── predictor_precios.py     # Script interactivo principal
-├── prueba_de_modelos.ipynb  # Notebook alternativo
-├── requirements.txt          # Dependencias
-├── modelos_join/            # Modelos entrenados (.pkl)
+├── api_predictor.py         # Lógica core de la API
+├── app_flask.py             # Servidor REST
+├── requirements.txt         # Dependencias
+├── Procfile                 # Configuración de deploy
+├── Dockerfile               # Contenedor Docker
+├── modelos_join/            # 87 modelos Prophet (.pkl)
 ├── predicciones/            # JSONs generados
-└── graficas/                # Gráficas generadas
+├── graficas/                # Gráficas PNG generadas
 ```
 
-## 💡 Ejemplo de Uso
+## Tecnologías
 
-```bash
-$ python predictor_precios.py
+- **Python 3.11** - Lenguaje principal
+- **Flask 2.3+** - Framework web
+- **Prophet 1.1+** - Predicción de series temporales
+- **Pandas 2.0+** - Manipulación de datos
+- **Matplotlib 3.7+** - Generación de gráficas
+- **Gunicorn** - Servidor WSGI para producción
 
-============================================================
-   SISTEMA DE PREDICCIÓN DE PRECIOS DE ALIMENTOS
-============================================================
+## 📄 Licencia
 
-1. Ver productos disponibles
-2. Generar predicciones para productos
-3. Salir
+Este proyecto está bajo la Licencia MIT.
 
-Seleccione una opción (1-3): 2
-
-📅 CONFIGURACIÓN DEL PERÍODO
-------------------------------------------------------------
-Fecha de inicio (YYYY-MM-DD, ejemplo: 2026-01-01): 2026-01-01
-Fecha de fin (YYYY-MM-DD, ejemplo: 2026-01-31): 2026-01-31
-
-🛒 SELECCIÓN DE PRODUCTOS
-------------------------------------------------------------
-Producto 1: Tortilla de maíz
-✓ 'Tortilla de maíz' agregado (1 producto(s) en total)
-
-Producto 2: Arroz
-✓ 'Arroz' agregado (2 producto(s) en total)
-
-Producto 3: fin
-
-[Procesando...]
-```
-
-## 🤝 Soporte
-
-Para problemas o preguntas, revisa que:
-- Todos los archivos de modelos estén en `modelos_join/`
-- Las dependencias estén instaladas correctamente
-- Las fechas estén en formato YYYY-MM-DD
