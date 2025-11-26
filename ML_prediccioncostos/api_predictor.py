@@ -1,8 +1,7 @@
 """
-API Backend para Sistema de Predicción de Precios
-Diseñado para ser consumido por un frontend
+API Backend para sistema de predicción de precios
+diseñado para ser consumido por un frontend
 """
-
 import joblib
 import pandas as pd
 import os
@@ -16,7 +15,6 @@ from typing import List, Dict, Any, Optional, Tuple
 class PredictorPreciosAPI:
     """
     Clase principal para el sistema de predicción de precios
-    Optimizada para ser usada desde un frontend
     """
     
     def __init__(self, carpetas_modelos='modelos_join'):
@@ -33,7 +31,6 @@ class PredictorPreciosAPI:
     def obtener_productos_disponibles(self) -> List[str]:
         """
         Retorna lista de todos los productos disponibles
-        
         Returns:
             List[str]: Lista de nombres de productos
         """
@@ -57,10 +54,8 @@ class PredictorPreciosAPI:
     def buscar_producto(self, nombre_buscado: str) -> Dict[str, Any]:
         """
         Busca un producto exacto o similares
-        
         Args:
-            nombre_buscado: Nombre del producto a buscar
-            
+            nombre_buscado: Nombre del producto a buscar   
         Returns:
             Dict con: {
                 "encontrado": bool,
@@ -80,7 +75,6 @@ class PredictorPreciosAPI:
                     "sugerencias": []
                 }
         
-        # Buscar similares
         similares = []
         palabras_buscadas = nombre_limpio.split('_')
         
@@ -260,7 +254,6 @@ class PredictorPreciosAPI:
         
         for producto in productos:
             try:
-                # Obtener predicciones
                 datos = self._obtener_prediccion_producto(producto, fecha_inicio, fecha_fin)
                 
                 if "error" in datos:
@@ -270,7 +263,6 @@ class PredictorPreciosAPI:
                     })
                     continue
                 
-                # Generar gráfica si está habilitado
                 ruta_grafica = None
                 if generar_graficas:
                     ruta_grafica = self._generar_grafica(
@@ -280,11 +272,8 @@ class PredictorPreciosAPI:
                         fecha_fin,
                         carpeta_graficas
                     )
-                
-                # Calcular mejor día
                 mejor_dia_info = self._calcular_mejor_dia(datos['predicciones'])
                 
-                # Preparar datos del producto
                 producto_data = {
                     "alimento": producto,
                     "fecha_inicio": fecha_inicio,
@@ -306,7 +295,6 @@ class PredictorPreciosAPI:
                     "error": str(e)
                 })
         
-        # Preparar respuesta final
         resultado = {
             "fecha_consulta": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             "periodo": {
@@ -322,7 +310,6 @@ class PredictorPreciosAPI:
         if errores:
             resultado["errores"] = errores
         
-        # Guardar JSON
         nombre_archivo = f'predicciones_{fecha_inicio}_a_{fecha_fin}.json'
         ruta_json = os.path.join(carpeta_json, nombre_archivo)
         
@@ -332,9 +319,6 @@ class PredictorPreciosAPI:
         resultado["ruta_json"] = ruta_json
         
         return resultado
-
-
-# FUNCIONES PARA EL FRONTEND
 
 
 def inicializar_api(carpeta_modelos: str = 'modelos_join') -> PredictorPreciosAPI:

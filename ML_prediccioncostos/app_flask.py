@@ -1,6 +1,5 @@
 """
-API REST con Flask para Sistema de Predicción de Precios
-Para usar con cualquier frontend (React, Vue, Angular, etc.)
+API REST con Flask para sistema de predicción de precios
 """
 
 from flask import Flask, request, jsonify, send_file
@@ -17,7 +16,7 @@ predictor = PredictorPreciosAPI()
 
 
 # ============================================================
-# ENDPOINTS DE LA API
+# ENDPOINTS 
 # ============================================================
 
 @app.route('/api/health', methods=['GET'])
@@ -127,7 +126,6 @@ def generar_predicciones():
     try:
         data = request.get_json()
         
-        # Validar campos requeridos
         if not data:
             return jsonify({
                 "success": False,
@@ -151,7 +149,6 @@ def generar_predicciones():
                 "error": "Fechas de inicio y fin requeridas"
             }), 400
         
-        # Validar formato de fechas
         try:
             datetime.strptime(fecha_inicio, '%Y-%m-%d')
             datetime.strptime(fecha_fin, '%Y-%m-%d')
@@ -161,7 +158,6 @@ def generar_predicciones():
                 "error": "Formato de fecha inválido. Use YYYY-MM-DD"
             }), 400
         
-        # Generar predicciones
         resultado = predictor.generar_predicciones(
             productos=productos,
             fecha_inicio=fecha_inicio,
@@ -264,8 +260,7 @@ if __name__ == '__main__':
     print("  GET  /api/predicciones/<filename>")
     print("\n" + "="*60)
     
-    # Obtener puerto de variable de entorno o usar 5000 por defecto
     port = int(os.environ.get('PORT', 5000))
     
-    # Modo desarrollo local
+
     app.run(host='0.0.0.0', port=port, debug=True)
