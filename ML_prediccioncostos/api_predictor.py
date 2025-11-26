@@ -1,7 +1,8 @@
 """
-API Backend para sistema de predicción de precios
-diseñado para ser consumido por un frontend
+API Backend para Sistema de Predicción de Precios
+Diseñado para ser consumido por un frontend
 """
+
 import joblib
 import pandas as pd
 import os
@@ -15,6 +16,7 @@ from typing import List, Dict, Any, Optional, Tuple
 class PredictorPreciosAPI:
     """
     Clase principal para el sistema de predicción de precios
+    Optimizada para ser usada desde un frontend
     """
     
     def __init__(self, carpetas_modelos='modelos_join'):
@@ -31,6 +33,7 @@ class PredictorPreciosAPI:
     def obtener_productos_disponibles(self) -> List[str]:
         """
         Retorna lista de todos los productos disponibles
+        
         Returns:
             List[str]: Lista de nombres de productos
         """
@@ -54,8 +57,10 @@ class PredictorPreciosAPI:
     def buscar_producto(self, nombre_buscado: str) -> Dict[str, Any]:
         """
         Busca un producto exacto o similares
+        
         Args:
-            nombre_buscado: Nombre del producto a buscar   
+            nombre_buscado: Nombre del producto a buscar
+            
         Returns:
             Dict con: {
                 "encontrado": bool,
@@ -75,6 +80,7 @@ class PredictorPreciosAPI:
                     "sugerencias": []
                 }
         
+        # Buscar similares
         similares = []
         palabras_buscadas = nombre_limpio.split('_')
         
@@ -251,39 +257,11 @@ class PredictorPreciosAPI:
         
         productos_procesados = []
         errores = []
-        correcciones = []
         
         for producto in productos:
             try:
-                # Intentar buscar el producto si no existe exactamente
-                producto_a_usar = producto
-                fue_corregido = False
-                
-                # Verificar si el producto existe
-                resultado_busqueda = self.buscar_producto(producto)
-                
-                if not resultado_busqueda['encontrado']:
-                    # Si no se encuentra exacto, usar la primera sugerencia
-                    if resultado_busqueda['sugerencias']:
-                        producto_original = producto
-                        producto_a_usar = resultado_busqueda['sugerencias'][0]
-                        fue_corregido = True
-                        correcciones.append({
-                            "producto_solicitado": producto_original,
-                            "producto_usado": producto_a_usar
-                        })
-                    else:
-                        # No hay sugerencias, agregar error
-                        errores.append({
-                            "producto": producto,
-                            "error": f"No se encontró modelo para '{producto}' ni sugerencias disponibles"
-                        })
-                        continue
-                else:
-                    producto_a_usar = resultado_busqueda['producto_exacto']
-                
-                # Obtener predicciones con el producto correcto
-                datos = self._obtener_prediccion_producto(producto_a_usar, fecha_inicio, fecha_fin)
+                # Obtener predicciones
+                datos = self._obtener_prediccion_producto(producto, fecha_inicio, fecha_fin)
                 
                 if "error" in datos:
                     errores.append({
@@ -292,19 +270,23 @@ class PredictorPreciosAPI:
                     })
                     continue
                 
+                # Generar gráfica si está habilitado
                 ruta_grafica = None
                 if generar_graficas:
                     ruta_grafica = self._generar_grafica(
-                        producto_a_usar,
+                        producto,
                         datos['predicciones'],
                         fecha_inicio,
                         fecha_fin,
                         carpeta_graficas
                     )
+                
+                # Calcular mejor día
                 mejor_dia_info = self._calcular_mejor_dia(datos['predicciones'])
                 
+                # Preparar datos del producto
                 producto_data = {
-                    "alimento": producto_a_usar,
+                    "alimento": producto,
                     "fecha_inicio": fecha_inicio,
                     "fecha_fin": fecha_fin,
                     "unidad": "kg/litro",
@@ -312,11 +294,6 @@ class PredictorPreciosAPI:
                     "mejor_dia_compra": mejor_dia_info,
                     "predicciones": datos['predicciones']
                 }
-                
-                # Si fue corregido, agregar información
-                if fue_corregido:
-                    producto_data["producto_solicitado"] = producto
-                    producto_data["nota"] = f"Se usó '{producto_a_usar}' (mejor coincidencia para '{producto}')"
                 
                 if ruta_grafica:
                     producto_data["grafica"] = ruta_grafica
@@ -329,6 +306,7 @@ class PredictorPreciosAPI:
                     "error": str(e)
                 })
         
+        # Preparar respuesta final
         resultado = {
             "fecha_consulta": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             "periodo": {
@@ -341,14 +319,10 @@ class PredictorPreciosAPI:
             "productos": productos_procesados
         }
         
-        # Agregar correcciones si las hubo
-        if correcciones:
-            resultado["correcciones"] = correcciones
-            resultado["nota"] = f"Se realizaron {len(correcciones)} corrección(es) automática(s)"
-        
         if errores:
             resultado["errores"] = errores
         
+        # Guardar JSON
         nombre_archivo = f'predicciones_{fecha_inicio}_a_{fecha_fin}.json'
         ruta_json = os.path.join(carpeta_json, nombre_archivo)
         
@@ -359,6 +333,10 @@ class PredictorPreciosAPI:
         
         return resultado
 
+
+# ============================================================
+# FUNCIONES DE UTILIDAD PARA EL FRONTEND
+# ============================================================
 
 def inicializar_api(carpeta_modelos: str = 'modelos_join') -> PredictorPreciosAPI:
     """
@@ -452,7 +430,9 @@ def generar_predicciones_api(productos: List[str], fecha_inicio: str,
         }
 
 
+# ============================================================
 # EJEMPLO DE USO PARA EL FRONTEND
+# ============================================================
 
 if __name__ == "__main__":
     print("="*60)
@@ -469,9 +449,9 @@ if __name__ == "__main__":
     print("\n2. Buscar producto 'leche':")
     busqueda_resp = buscar_producto_api("leche")
     if busqueda_resp['encontrado']:
-        print(f"Encontrado: {busqueda_resp['producto_exacto']}")
+        print(f"   ✓ Encontrado: {busqueda_resp['producto_exacto']}")
     else:
-        print(f"Sugerencias: {busqueda_resp['sugerencias'][:3]}")
+        print(f"   ⚠ Sugerencias: {busqueda_resp['sugerencias'][:3]}")
     
     # 3. Generar predicciones
     print("\n3. Generar predicciones:")
@@ -483,8 +463,8 @@ if __name__ == "__main__":
     )
     
     if predicciones_resp['success']:
-        print(f"Productos procesados: {predicciones_resp['productos_procesados']}")
-        print(f"JSON guardado en: {predicciones_resp['ruta_json']}")
+        print(f"   ✓ Productos procesados: {predicciones_resp['productos_procesados']}")
+        print(f"   ✓ JSON guardado en: {predicciones_resp['ruta_json']}")
         
         # Mostrar mejor día del primer producto
         if predicciones_resp['productos']:
@@ -492,12 +472,12 @@ if __name__ == "__main__":
             mejor = primer_prod['mejor_dia_compra']
             print(f"\n   Mejor día para {primer_prod['alimento']}:")
             if mejor['tipo'] == 'rango':
-                print(f"{mejor['fecha_inicio']} al {mejor['fecha_fin']}")
-                print(f"${mejor['precio_esperado']}")
+                print(f"     📅 {mejor['fecha_inicio']} al {mejor['fecha_fin']}")
+                print(f"     💰 ${mejor['precio_esperado']}")
             else:
-                print(f"{mejor['fecha']}")
-                print(f"${mejor['precio_esperado']}")
+                print(f"     📅 {mejor['fecha']}")
+                print(f"     💰 ${mejor['precio_esperado']}")
     else:
-        print(f"Error: {predicciones_resp['error']}")
+        print(f"   ✗ Error: {predicciones_resp['error']}")
     
     print("\n" + "="*60)
